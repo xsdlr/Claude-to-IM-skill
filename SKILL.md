@@ -125,6 +125,11 @@ Ask for runtime, default working directory, model, and mode:
 - **Working Directory**: default `$CWD`
 - **Model** (optional): Leave blank to inherit the runtime's own default model. If the user wants to override, ask them to enter a model name. Do NOT hardcode or suggest specific model names — the available models change over time.
 - **Mode**: `code` (default), `plan`, `ask`
+- **Auto Approve** (optional): Ask if the user wants to enable `CTI_AUTO_APPROVE`. Explain:
+  - When enabled, all tool permission requests are auto-approved without user confirmation.
+  - Useful for channels that lack interactive permission UI (e.g., Feishu WebSocket long-connection mode, QQ, WeChat).
+  - ⚠️ **Security warning**: Only enable this in trusted, access-controlled environments.
+  - Default: `false` (disabled). If the user says yes, set `CTI_AUTO_APPROVE=true`.
 
 **Step 4 — Write config and validate**
 
