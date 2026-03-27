@@ -6,6 +6,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import crypto from 'node:crypto';
 
 import { initBridgeContext } from 'claude-to-im/src/lib/bridge/context.js';
@@ -28,6 +29,35 @@ const STATUS_FILE = path.join(RUNTIME_DIR, 'status.json');
 const PID_FILE = path.join(RUNTIME_DIR, 'bridge.pid');
 
 /**
+ * Discover installed skills from ~/.claude/skills directory.
+ * Returns an array of skill names that have a SKILL.md file.
+ */
+function discoverInstalledSkills(): string[] {
+  const skillsDir = path.join(os.homedir(), '.claude', 'skills');
+  const skills: string[] = [];
+
+  try {
+    const entries = fs.readdirSync(skillsDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        const skillMdPath = path.join(skillsDir, entry.name, 'SKILL.md');
+        if (fs.existsSync(skillMdPath)) {
+          skills.push(entry.name);
+        }
+      }
+    }
+    if (skills.length > 0) {
+      console.log(`[claude-to-im] Discovered ${skills.length} installed skill(s): ${skills.join(', ')}`);
+    }
+  } catch {
+    // Skills directory doesn't exist or is not readable
+    console.log('[claude-to-im] No skills directory found, skipping skill discovery');
+  }
+
+  return skills;
+}
+
+/**
  * Resolve the LLM provider based on the runtime setting.
  * - 'claude' (default): uses Claude Code SDK via SDKLLMProvider
  * - 'codex': uses @openai/codex-sdk via CodexProvider
@@ -48,7 +78,7 @@ async function resolveProvider(config: Config, pendingPerms: PendingPermissions)
       const check = preflightCheck(cliPath);
       if (check.ok) {
         console.log(`[claude-to-im] Auto: using Claude CLI at ${cliPath} (${check.version})`);
-        return new SDKLLMProvider(pendingPerms, cliPath, config.autoApprove);
+        return new SDKLLMProvider(pendingPerms, cliPath, config.autoApprove, discoverInstalledSkills());
       }
       // Preflight failed — fall through to Codex instead of silently using a broken CLI
       console.warn(
@@ -93,7 +123,7 @@ async function resolveProvider(config: Config, pendingPerms: PendingPermissions)
     process.exit(1);
   }
 
-  return new SDKLLMProvider(pendingPerms, cliPath, config.autoApprove);
+  return new SDKLLMProvider(pendingPerms, cliPath, config.autoApprove, discoverInstalledSkills());
 }
 
 interface StatusInfo {

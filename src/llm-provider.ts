@@ -422,16 +422,19 @@ export interface StreamState {
 export class SDKLLMProvider implements LLMProvider {
   private cliPath: string | undefined;
   private autoApprove: boolean;
+  private skills: string[] | undefined;
 
-  constructor(private pendingPerms: PendingPermissions, cliPath?: string, autoApprove = false) {
+  constructor(private pendingPerms: PendingPermissions, cliPath?: string, autoApprove = false, skills?: string[]) {
     this.cliPath = cliPath;
     this.autoApprove = autoApprove;
+    this.skills = skills;
   }
 
   streamChat(params: StreamChatParams): ReadableStream<string> {
     const pendingPerms = this.pendingPerms;
     const cliPath = this.cliPath;
     const autoApprove = this.autoApprove;
+    const skills = this.skills;
 
     return new ReadableStream({
       start(controller) {
@@ -467,6 +470,10 @@ export class SDKLLMProvider implements LLMProvider {
               resume: params.sdkSessionId || undefined,
               abortController: params.abortController,
               permissionMode: (params.permissionMode as 'default' | 'acceptEdits' | 'plan') || undefined,
+              // Enable Skills loading from filesystem (user + project settings)
+              settingSources: ['user', 'project'],
+              // Skills parameter: preload specified skills
+              skills: skills && skills.length > 0 ? skills : undefined,
               includePartialMessages: true,
               env: cleanEnv,
               stderr: (data: string) => {
